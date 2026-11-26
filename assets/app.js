@@ -1,3 +1,18 @@
+// --- FIREBASE INITIALIZATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyB8HiVHB06Mg3gatXBRU4ccyf_wOEJhIfs",
+  authDomain: "nexa-ai-users.firebaseapp.com",
+  projectId: "nexa-ai-users",
+  storageBucket: "nexa-ai-users.firebasestorage.app",
+  messagingSenderId: "759430454615",
+  appId: "1:759430454615:web:6ff42b7179514337453212"
+};
+
+// Inisialisasi Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 // --- NEXA AI: MAIN APPLICATION CONTROLLER ---
 const $ = (selector) => document.querySelector(selector);
 
@@ -43,7 +58,7 @@ function currentChat() {
 function renderHistory() {
   const container = $("#chatHistory");
   if (!state.chats.length) {
-    container.innerHTML = '<p class="empty-history">Percakapan akan muncul di sini.</p>';
+    container.innerHTML = '<p class="empty-history" style="padding-left: 8px;">Percakapan akan muncul di sini.</p>';
     return;
   }
   container.innerHTML = "";
@@ -342,7 +357,7 @@ async function askAI(chat) {
   return data.reply;
 }
 
-// --- FUNGSI PENGELOLA TOKEN SEBELUM KIRIM PESAN ---
+// --- FUNGSI PENGELOLA TOKEN & FIREBASE AUTH ---
 function checkAndConsumeTokenForSend() {
   const savedUser = JSON.parse(localStorage.getItem("nexa_logged_user"));
   if (savedUser) return true; // Unlimited jika sudah login
@@ -475,7 +490,7 @@ if (input) {
   });
 }
 
-// --- KONTROL TOMBOL SIDEBAR & PENCARIAN DI ATAS SIDEBAR ---
+// --- KONTROL TOMBOL SIDEBAR & PENCARIAN ---
 const sidebar = $("#sidebar");
 const overlay = $("#overlay");
 const customSidebarToggleBtn = $("#customSidebarToggleBtn");
@@ -565,15 +580,145 @@ if (localStorage.getItem("nexa_theme") === "light") document.body.classList.add(
 renderHistory();
 if (state.chats.length) openChat(state.chats[state.chats.length - 1].id);
 
-// --- OPENING ANIMATION DISMISS ---
-window.addEventListener("load", () => {
-  const splash = document.getElementById("splash-screen");
-  if (splash) {
-    setTimeout(() => {
-      splash.classList.add("fade-out");
-      setTimeout(() => {
-        splash.remove();
-      }, 850);
-    }, 2000);
+// --- FIREBASE UI & AUTH MANAGEMENT ---
+document.addEventListener("DOMContentLoaded", () => {
+  const userNameDisplay = $("#userNameDisplay");
+  const userStatusDisplay = $("#userStatusDisplay");
+  const userAvatar = $("#userAvatar");
+  const authActionBtn = $("#authActionBtn");
+  const tokenCountEl = $("#tokenCount");
+  const tokenPill = $("#tokenPill");
+  const tokenLabel = $("#tokenLabel");
+  
+  const authGate = $("#authGate");
+  const googleLoginBtn = $("#googleLoginBtn");
+  const authInfoMsg = $("#authInfoMsg");
+  
+  const profileBox = $("#profileBox");
+  const logoutModal = $("#logoutModal");
+  const logoutUserName = $("#logoutUserName");
+  const cancelLogoutBtn = $("#cancelLogoutBtn");
+  const confirmLogoutBtn = $("#confirmLogoutBtn");
+
+  let currentTokens = parseInt(localStorage.getItem("nexa_tokens") || "50000", 10);
+
+  function updateUI() {
+    const savedUser = JSON.parse(localStorage.getItem("nexa_logged_user"));
+    if (savedUser) {
+      if(userNameDisplay) userNameDisplay.textContent = savedUser.name;
+      if(userStatusDisplay) userStatusDisplay.textContent = "Pro Member (Unlimited)";
+      if(userAvatar) {
+        if (savedUser.photo) {
+          userAvatar.innerHTML = `<img src="${savedUser.photo}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+        } else {
+          userAvatar.textContent = savedUser.name.charAt(0).toUpperCase();
+        }
+      }
+      if(authActionBtn) authActionBtn.textContent = "Keluar";
+      if(tokenCountEl) tokenCountEl.textContent = "∞";
+      if(tokenLabel) tokenLabel.textContent = "Unlimited";
+      if(tokenPill) tokenPill.classList.remove("low");
+    } else {
+      if(userNameDisplay) userNameDisplay.textContent = "Guest User";
+      if(userStatusDisplay) userStatusDisplay.textContent = "Free Trial Mode";
+      if(userAvatar) userAvatar.textContent = "G";
+      if(authActionBtn) authActionBtn.textContent = "Masuk";
+      if(tokenCountEl) tokenCountEl.textContent = currentTokens;
+      if(tokenLabel) tokenLabel.textContent = "Token";
+      if(currentTokens <= 1000) {
+        if(tokenPill) tokenPill.classList.add("low");
+      } else {
+        if(tokenPill) tokenPill.classList.remove("low");
+      }
+    }
   }
+
+  updateUI();
+
+  // Tombol Google Login via Firebase
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener("click", async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+
+        const userData = {
+          uid: user.uid,
+          name: user.displayName || "Google User",
+          email: user.email,
+          photo: user.photoURL
+        };
+
+        // Simpan ke LocalStorage aplikasi
+        localStorage.setItem("nexa_logged_user", JSON.stringify(userData));
+
+        // Simpan / Update data user ke Firestore Database secara otomatis
+        await db.collection("users").doc(user.uid).set({
+          uid: user.uid,
+          nama: user.displayName,
+          email: user.email,
+          foto: user.photoURL,
+          terakhirLogin: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        updateUI();
+        if(authGate) authGate.classList.add("hidden");
+        if(authInfoMsg) authInfoMsg.style.display = "none";
+      } catch (error) {
+        console.error("Gagal login Google:", error);
+        if(authInfoMsg) {
+          authInfoMsg.textContent = "Gagal login dengan Google: " + error.message;
+          authInfoMsg.style.display = "block";
+        }
+      }
+    });
+  }
+
+  if (profileBox) {
+    profileBox.addEventListener("click", () => {
+      const savedUser = JSON.parse(localStorage.getItem("nexa_logged_user"));
+      if (savedUser) {
+        if(logoutUserName) logoutUserName.textContent = savedUser.name;
+        if(logoutModal) logoutModal.classList.remove("hidden");
+      } else {
+        if(authGate) authGate.classList.remove("hidden");
+      }
+    });
+  }
+
+  if (cancelLogoutBtn) {
+    cancelLogoutBtn.addEventListener("click", () => {
+      if(logoutModal) logoutModal.classList.add("hidden");
+    });
+  }
+
+  if (confirmLogoutBtn) {
+    confirmLogoutBtn.addEventListener("click", async () => {
+      try {
+        await auth.signOut();
+      } catch (e) {
+        console.error(e);
+      }
+      localStorage.removeItem("nexa_logged_user");
+      currentTokens = 50000;
+      localStorage.setItem("nexa_tokens", currentTokens);
+      updateUI();
+      if(logoutModal) logoutModal.classList.add("hidden");
+      if(authGate) authGate.classList.remove("hidden");
+    });
+  }
+
+  // --- OPENING ANIMATION DISMISS ---
+  window.addEventListener("load", () => {
+    const splash = document.getElementById("splash-screen");
+    if (splash) {
+      setTimeout(() => {
+        splash.classList.add("fade-out");
+        setTimeout(() => {
+          splash.remove();
+        }, 850);
+      }, 2000);
+    }
+  });
 });
