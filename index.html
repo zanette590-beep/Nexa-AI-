@@ -9,8 +9,110 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link
-  
+  <style>
+    /* Styling Tombol Ikon Modern */
+    .icon-action-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text, #ececec);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    .icon-action-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+    body.light .icon-action-btn {
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: #424242;
+    }
+    body.light .icon-action-btn:hover {
+      background-color: rgba(0, 0, 0, 0.06);
+    }
+
+    /* --- SIDEBAR & COLLAPSED MODE --- */
+    aside.sidebar {
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease !important;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    aside.sidebar.collapsed {
+      width: 72px !important;
+      min-width: 72px !important;
+    }
+
+    aside.sidebar.collapsed .brand-name,
+    aside.sidebar.collapsed .new-chat span:nth-child(2),
+    aside.sidebar.collapsed #chatSearchInput,
+    aside.sidebar.collapsed .history-area,
+    aside.sidebar.collapsed .cs-support-box,
+    aside.sidebar.collapsed .sidebar-action span:nth-child(2),
+    aside.sidebar.collapsed .profile-info,
+    aside.sidebar.collapsed .profile-menu,
+    aside.sidebar.collapsed .section-label {
+      display: none !important;
+    }
+
+    aside.sidebar.collapsed .sidebar-top {
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 10px !important;
+      padding: 14px 0 !important;
+    }
+
+    aside.sidebar.collapsed .sidebar-top .brand {
+      margin-right: 0 !important;
+    }
+
+    aside.sidebar.collapsed #sidebarTopActions {
+      flex-direction: column !important;
+      gap: 6px !important;
+    }
+
+    aside.sidebar.collapsed .new-chat {
+      padding: 10px !important;
+      justify-content: center !important;
+      margin: 6px auto !important;
+      width: 44px !important;
+      border-radius: 10px !important;
+    }
+
+    aside.sidebar.collapsed .sidebar-bottom {
+      align-items: center !important;
+      padding: 12px 6px !important;
+      gap: 8px !important;
+    }
+
+    aside.sidebar.collapsed .sidebar-action {
+      justify-content: center !important;
+      padding: 10px !important;
+      width: 44px !important;
+      border-radius: 10px !important;
+    }
+
+    aside.sidebar.collapsed .profile {
+      justify-content: center !important;
+      padding: 6px !important;
+      width: 44px !important;
+      height: 44px !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Utility Kelas untuk Sembunyikan Elemen */
+    .hidden {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
   <!-- OPENING ANIMASI FUTURISTIK -->
