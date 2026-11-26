@@ -9,7 +9,9 @@ const firebaseConfig = {
 };
 
 // Inisialisasi Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -36,18 +38,29 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// Lightweight Markdown renderer
+// Lightweight Markdown renderer (Diperbarui agar **bold** tampil bersih tanpa bintang)
 function renderMarkdown(raw) {
+  if (!raw) return "";
   const blocks = [];
+  
   let safe = escapeHTML(raw).replace(/```([\w-]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     blocks.push(`<pre><code>${code.trimEnd()}</code></pre>`);
     return `@@BLOCK${blocks.length - 1}@@`;
   });
+
+  // Konversi tanda **teks** menjadi <strong>teks</strong>
+  safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  
+  // Konversi tanda *teks* menjadi <em>teks</em>
+  safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
   safe = safe.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+
   safe = safe.split(/\n{2,}/).map(part => {
     const blockMatch = part.match(/^@@BLOCK(\d+)@@$/);
     return blockMatch ? blocks[Number(blockMatch[1])] : `<p>${part.replace(/\n/g, "<br>")}</p>`;
   }).join("");
+  
   return safe;
 }
 
@@ -57,6 +70,7 @@ function currentChat() {
 
 function renderHistory() {
   const container = $("#chatHistory");
+  if (!container) return;
   if (!state.chats.length) {
     container.innerHTML = '<p class="empty-history" style="padding-left: 8px;">Percakapan akan muncul di sini.</p>';
     return;
@@ -73,6 +87,7 @@ function renderHistory() {
 }
 
 function renderMessage(message) {
+  if (!messagesEl) return;
   const article = document.createElement("article");
   article.className = `message ${message.role}`;
   const isUser = message.role === "user";
@@ -121,7 +136,7 @@ function renderMessage(message) {
 
 function openChat(id) {
   state.activeId = id;
-  messagesEl.innerHTML = "";
+  if (messagesEl) messagesEl.innerHTML = "";
   const chat = currentChat();
   if (chat) chat.messages.forEach(renderMessage);
   if (welcome) welcome.hidden = !!chat?.messages.length;
@@ -132,7 +147,7 @@ function openChat(id) {
 
 function newChat() {
   state.activeId = null;
-  messagesEl.innerHTML = "";
+  if (messagesEl) messagesEl.innerHTML = "";
   if (welcome) welcome.hidden = false;
   if (input) input.value = "";
   clearAttachment();
@@ -148,6 +163,7 @@ function scrollToBottom() {
 
 // --- INDIKATOR: NEXA SEDANG MENGETIK ---
 function showTyping() {
+  if (!messagesEl) return;
   const node = document.createElement("article");
   node.className = "message assistant";
   node.id = "typingIndicator";
@@ -454,7 +470,7 @@ function retryLast() {
   if (chat.messages.at(-1)?.role === "assistant") chat.messages.pop();
   const lastUser = [...chat.messages].reverse().find(message => message.role === "user");
   if (!lastUser) return;
-  messagesEl.innerHTML = "";
+  if (messagesEl) messagesEl.innerHTML = "";
   chat.messages.forEach(renderMessage);
   chat.messages.pop();
   if (lastUser.attachment) currentAttachment = lastUser.attachment;
@@ -708,17 +724,17 @@ document.addEventListener("DOMContentLoaded", () => {
       if(authGate) authGate.classList.remove("hidden");
     });
   }
+});
 
-  // --- OPENING ANIMATION DISMISS ---
-  window.addEventListener("load", () => {
-    const splash = document.getElementById("splash-screen");
-    if (splash) {
+// --- OPENING ANIMATION DISMISS ---
+window.addEventListener("load", () => {
+  const splash = document.getElementById("splash-screen");
+  if (splash) {
+    setTimeout(() => {
+      splash.classList.add("fade-out");
       setTimeout(() => {
-        splash.classList.add("fade-out");
-        setTimeout(() => {
-          splash.remove();
-        }, 850);
-      }, 2000);
-    }
-  });
+        splash.remove();
+      }, 850);
+    }, 2000);
+  }
 });
