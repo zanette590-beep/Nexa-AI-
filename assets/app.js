@@ -38,7 +38,7 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// Lightweight Markdown renderer (Diperbarui agar **bold** tampil bersih tanpa bintang)
+// Lightweight Markdown renderer
 function renderMarkdown(raw) {
   if (!raw) return "";
   const blocks = [];
@@ -48,12 +48,8 @@ function renderMarkdown(raw) {
     return `@@BLOCK${blocks.length - 1}@@`;
   });
 
-  // Konversi tanda **teks** menjadi <strong>teks</strong>
   safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  
-  // Konversi tanda *teks* menjadi <em>teks</em>
   safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-
   safe = safe.replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
   safe = safe.split(/\n{2,}/).map(part => {
@@ -161,7 +157,6 @@ function scrollToBottom() {
   if (conv) conv.scrollTop = conv.scrollHeight;
 }
 
-// --- INDIKATOR: NEXA SEDANG MENGETIK ---
 function showTyping() {
   if (!messagesEl) return;
   const node = document.createElement("article");
@@ -196,7 +191,6 @@ function createChat(firstMessage) {
   return chat;
 }
 
-// --- FITUR LAMPIRAN FILE ---
 const fileInput = document.getElementById("file-upload");
 let currentAttachment = null;
 
@@ -298,7 +292,6 @@ if (input) {
   });
 }
 
-// --- FITUR REKAM SUARA (SPEECH TO TEXT) ---
 const micBtn = document.getElementById("micBtn");
 
 if (micBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -373,10 +366,9 @@ async function askAI(chat) {
   return data.reply;
 }
 
-// --- FUNGSI PENGELOLA TOKEN & FIREBASE AUTH ---
 function checkAndConsumeTokenForSend() {
   const savedUser = JSON.parse(localStorage.getItem("nexa_logged_user"));
-  if (savedUser) return true; // Unlimited jika sudah login
+  if (savedUser) return true;
 
   let currentTokens = parseInt(localStorage.getItem("nexa_tokens") || "50000", 10);
   
@@ -506,7 +498,6 @@ if (input) {
   });
 }
 
-// --- KONTROL TOMBOL SIDEBAR & PENCARIAN ---
 const sidebar = $("#sidebar");
 const overlay = $("#overlay");
 const customSidebarToggleBtn = $("#customSidebarToggleBtn");
@@ -553,7 +544,6 @@ $("#themeToggle")?.addEventListener("click", () => {
   localStorage.setItem("nexa_theme", document.body.classList.contains("light") ? "light" : "dark");
 });
 
-// --- FITUR SHARE CHAT ---
 $("#shareChat")?.addEventListener("click", async () => {
   const chat = currentChat();
   if (!chat || !chat.messages.length) {
@@ -596,8 +586,47 @@ if (localStorage.getItem("nexa_theme") === "light") document.body.classList.add(
 renderHistory();
 if (state.chats.length) openChat(state.chats[state.chats.length - 1].id);
 
-// --- FIREBASE UI & AUTH MANAGEMENT ---
+// --- FIREBASE UI, AUTH & CUSTOM INTERACTIVE CONTROLS ---
 document.addEventListener("DOMContentLoaded", () => {
+  // 1. Toggle Sidebar Collapsed / Expand Mode
+  const sidebarEl = $("#sidebar");
+  const customSidebarToggleBtn = $("#customSidebarToggleBtn");
+  
+  if (customSidebarToggleBtn && sidebarEl) {
+    customSidebarToggleBtn.addEventListener("click", () => {
+      sidebarEl.classList.toggle("collapsed");
+    });
+  }
+
+  // 2. Dropdown Pemilih Model AI
+  const modelSelectorBtn = $("#modelSelectorBtn");
+  const modelDropdown = $("#modelDropdown");
+  const currentModelName = $("#currentModelName");
+  const activeModelHint = $("#activeModelHint");
+
+  if (modelSelectorBtn && modelDropdown) {
+    modelSelectorBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      modelDropdown.classList.toggle("hidden");
+    });
+
+    document.querySelectorAll(".model-option").forEach(option => {
+      option.addEventListener("click", () => {
+        const selectedModel = option.getAttribute("data-model");
+        if (currentModelName) currentModelName.textContent = selectedModel;
+        if (activeModelHint) activeModelHint.textContent = "Model: " + selectedModel.split(" ")[0];
+        modelDropdown.classList.add("hidden");
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!modelSelectorBtn.contains(e.target) && !modelDropdown.contains(e.target)) {
+        modelDropdown.classList.add("hidden");
+      }
+    });
+  }
+
+  // 3. Firebase Auth & UI Handler
   const userNameDisplay = $("#userNameDisplay");
   const userStatusDisplay = $("#userStatusDisplay");
   const userAvatar = $("#userAvatar");
@@ -651,7 +680,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateUI();
 
-  // Tombol Google Login via Firebase
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener("click", async () => {
       const provider = new firebase.auth.GoogleAuthProvider();
@@ -666,10 +694,8 @@ document.addEventListener("DOMContentLoaded", () => {
           photo: user.photoURL
         };
 
-        // Simpan ke LocalStorage aplikasi
         localStorage.setItem("nexa_logged_user", JSON.stringify(userData));
 
-        // Simpan / Update data user ke Firestore Database secara otomatis
         await db.collection("users").doc(user.uid).set({
           uid: user.uid,
           nama: user.displayName,
