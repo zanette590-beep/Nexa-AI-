@@ -409,10 +409,17 @@ async function askAI(chat) {
     return "Saya diciptakan oleh **Oktorio Dwi Kasih Christian** dan **Alfiano Wahyu Al-Qowy**. Mereka adalah pencipta dan pengembang brilian yang merancang sistem Nexa AI ini untuk membantu pengguna dalam berbagai tugas, memberikan informasi, serta berinteraksi sehari-hari.";
   }
 
+  // Ambil pilihan model aktif dari UI untuk dikirim ke backend
+  const currentModelEl = document.getElementById("currentModelName");
+  const selectedModelName = currentModelEl ? currentModelEl.textContent : "Nexa Pro";
+
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: chat.messages })
+    body: JSON.stringify({ 
+      messages: chat.messages,
+      model: selectedModelName
+    })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
