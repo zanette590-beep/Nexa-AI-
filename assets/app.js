@@ -38,12 +38,12 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// Lightweight Markdown renderer (Bersih & Akurat untuk Blok Kode, Heading, dan Tabel)
+// Lightweight Markdown renderer (Bersih & Akurat untuk Heading, Blok Kode, dan Tabel)
 function renderMarkdown(raw) {
   if (!raw) return "";
   const blocks = [];
   
-  // 1. Ekstrak dan amankan blok kode (```...```)
+  // 1. Amankan blok kode (```...```)
   let safe = escapeHTML(raw).replace(/```([\w-]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     blocks.push(`<pre><code>${code.trimEnd()}</code></pre>`);
     return `@@BLOCK${blocks.length - 1}@@`;
@@ -54,12 +54,15 @@ function renderMarkdown(raw) {
   safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   safe = safe.replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
-  // 3. Tangani Heading Markdown (###, ##, #)
-  safe = safe.replace(/^### (.*$)/gm, '<h3 style="margin: 12px 0 6px; font-size: 15px; font-weight: 600;">$1</h3>');
-  safe = safe.replace(/^## (.*$)/gm, '<h2 style="margin: 14px 0 8px; font-size: 17px; font-weight: 600;">$2</h2>');
-  safe = safe.replace(/^# (.*$)/gm, '<h1 style="margin: 16px 0 10px; font-size: 19px; font-weight: 700;">$3</h1>');
+  // 3. Konversi heading Markdown (###, ##, #) dengan aman
+  safe = safe.replace(/^###\s+(.*$)/gm, '<h3 style="margin: 14px 0 6px; font-size: 14.5px; font-weight: 600; color: var(--text);">$1</h3>');
+  safe = safe.replace(/^##\s+(.*$)/gm, '<h2 style="margin: 16px 0 8px; font-size: 16px; font-weight: 600; color: var(--text);">$1</h2>');
+  safe = safe.replace(/^#\s+(.*$)/gm, '<h1 style="margin: 18px 0 10px; font-size: 18px; font-weight: 700; color: var(--text);">$1</h1>');
 
-  // 4. Konversi tabel Markdown menjadi tabel HTML yang rapi
+  // 4. Ubah garis pemisah '---' menjadi garis tipis elegan (<hr>)
+  safe = safe.replace(/^\s*---\s*$/gm, '<hr style="border: none; border-top: 1px solid var(--line); margin: 12px 0;">');
+
+  // 5. Konversi tabel Markdown menjadi tabel HTML yang rapi
   const lines = safe.split("\n");
   let inTable = false;
   let tableHTML = "";
@@ -68,7 +71,7 @@ function renderMarkdown(raw) {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();
     if (line.startsWith("|") && line.endsWith("|")) {
-      if (line.includes("---")) continue; // Lewati baris pemisah markdown
+      if (line.includes("---")) continue; // Lewati baris pemisah tabel markdown
       
       const cells = line.split("|").slice(1, -1).map(c => c.trim());
       
@@ -97,15 +100,15 @@ function renderMarkdown(raw) {
     processedLines.push(tableHTML);
   }
 
-  // 5. Kembalikan blok kode yang sebelumnya diamankan
+  // 6. Kembalikan blok kode yang sebelumnya disimpan
   safe = processedLines.join("\n").replace(/@@BLOCK(\d+)@@/g, (_, index) => {
     return blocks[Number(index)] || "";
   });
 
-  // 6. Pisahkan paragraf dengan rapi
+  // 7. Pisahkan paragraf dengan rapi
   safe = safe.split(/\n{2,}/).map(part => {
     const trimmed = part.trim();
-    if (trimmed.startsWith("<pre") || trimmed.startsWith("<div") || trimmed.startsWith("<h1") || trimmed.startsWith("<h2") || trimmed.startsWith("<h3")) {
+    if (trimmed.startsWith("<pre") || trimmed.startsWith("<div") || trimmed.startsWith("<h1") || trimmed.startsWith("<h2") || trimmed.startsWith("<h3") || trimmed.startsWith("<hr")) {
       return trimmed;
     }
     return `<p style="margin: 0 0 10px;">${part.replace(/\n/g, "<br>")}</p>`;
