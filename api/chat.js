@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
     const messages = body.messages || [];
-    const model = body.model || 'llama-3.3-70b-versatile'; // Default model Groq
+    const model = body.model || 'llama-3.1-8b-instant'; // Default model aman
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model.includes('Swift') ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-8b-instant', // Menggunakan model universal Groq yang stabil
         messages: formattedMessages,
         temperature: 0.7,
         max_tokens: 1024
