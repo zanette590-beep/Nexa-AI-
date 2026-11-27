@@ -38,23 +38,77 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// Lightweight Markdown renderer
+// Lightweight Markdown renderer (Bersih & Akurat untuk Blok Kode, Heading, dan Tabel)
 function renderMarkdown(raw) {
   if (!raw) return "";
   const blocks = [];
   
+  // 1. Ekstrak dan amankan blok kode (```...```)
   let safe = escapeHTML(raw).replace(/```([\w-]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     blocks.push(`<pre><code>${code.trimEnd()}</code></pre>`);
     return `@@BLOCK${blocks.length - 1}@@`;
   });
 
+  // 2. Format teks bold, italic, dan inline code
   safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   safe = safe.replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
+  // 3. Tangani Heading Markdown (###, ##, #)
+  safe = safe.replace(/^### (.*$)/gm, '<h3 style="margin: 12px 0 6px; font-size: 15px; font-weight: 600;">$1</h3>');
+  safe = safe.replace(/^## (.*$)/gm, '<h2 style="margin: 14px 0 8px; font-size: 17px; font-weight: 600;">$2</h2>');
+  safe = safe.replace(/^# (.*$)/gm, '<h1 style="margin: 16px 0 10px; font-size: 19px; font-weight: 700;">$3</h1>');
+
+  // 4. Konversi tabel Markdown menjadi tabel HTML yang rapi
+  const lines = safe.split("\n");
+  let inTable = false;
+  let tableHTML = "";
+  const processedLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (line.startsWith("|") && line.endsWith("|")) {
+      if (line.includes("---")) continue; // Lewati baris pemisah markdown
+      
+      const cells = line.split("|").slice(1, -1).map(c => c.trim());
+      
+      if (!inTable) {
+        tableHTML += '<div style="overflow-x:auto; margin: 12px 0;"><table style="width:100%; border-collapse:collapse; font-size:12.5px;"><thead><tr style="background:var(--panel2);">';
+        cells.forEach(cell => { tableHTML += `<th style="border:1px solid var(--line); padding:7px 10px; text-align:left; font-weight:600;">${cell}</th>`; });
+        tableHTML += '</tr></thead><tbody>';
+        inTable = true;
+      } else {
+        tableHTML += '<tr style="border-bottom:1px solid var(--line);">';
+        cells.forEach(cell => { tableHTML += `<td style="border:1px solid var(--line); padding:7px 10px;">${cell}</td>`; });
+        tableHTML += '</tr>';
+      }
+    } else {
+      if (inTable) {
+        tableHTML += '</tbody></table></div>';
+        processedLines.push(tableHTML);
+        tableHTML = "";
+        inTable = false;
+      }
+      processedLines.push(lines[i]);
+    }
+  }
+  if (inTable) {
+    tableHTML += '</tbody></table></div>';
+    processedLines.push(tableHTML);
+  }
+
+  // 5. Kembalikan blok kode yang sebelumnya diamankan
+  safe = processedLines.join("\n").replace(/@@BLOCK(\d+)@@/g, (_, index) => {
+    return blocks[Number(index)] || "";
+  });
+
+  // 6. Pisahkan paragraf dengan rapi
   safe = safe.split(/\n{2,}/).map(part => {
-    const blockMatch = part.match(/^@@BLOCK(\d+)@@$/);
-    return blockMatch ? blocks[Number(blockMatch[1])] : `<p>${part.replace(/\n/g, "<br>")}</p>`;
+    const trimmed = part.trim();
+    if (trimmed.startsWith("<pre") || trimmed.startsWith("<div") || trimmed.startsWith("<h1") || trimmed.startsWith("<h2") || trimmed.startsWith("<h3")) {
+      return trimmed;
+    }
+    return `<p style="margin: 0 0 10px;">${part.replace(/\n/g, "<br>")}</p>`;
   }).join("");
   
   return safe;
@@ -588,7 +642,6 @@ if (state.chats.length) openChat(state.chats[state.chats.length - 1].id);
 
 // --- FIREBASE UI, AUTH & CUSTOM INTERACTIVE CONTROLS ---
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Toggle Sidebar Collapsed / Expand Mode
   const sidebarEl = $("#sidebar");
   const customSidebarToggleBtn = $("#customSidebarToggleBtn");
   
@@ -598,7 +651,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 2. Dropdown Pemilih Model AI
   const modelSelectorBtn = $("#modelSelectorBtn");
   const modelDropdown = $("#modelDropdown");
   const currentModelName = $("#currentModelName");
@@ -626,7 +678,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3. Firebase Auth & UI Handler
   const userNameDisplay = $("#userNameDisplay");
   const userStatusDisplay = $("#userStatusDisplay");
   const userAvatar = $("#userAvatar");
