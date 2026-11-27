@@ -36,8 +36,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: formattedMessages,
-        temperature: 0.7,
-        max_tokens: 1024
+        temperature: 0.7
       })
     });
 
