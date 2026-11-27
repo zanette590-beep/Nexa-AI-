@@ -748,3 +748,34 @@ button:active {
   .composer-wrap { width: calc(100% - 24px); padding-bottom: 10px; }
 }
 @media(min-width: 761px) { .sidebar-close { display: none; } }
+
+/* --- FIX SPLASH SCREEN / OPENING ANIMATION --- */
+#splash-screen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #0d0e12 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  opacity: 1;
+  visibility: visible;
+  overflow: hidden;
+  transition: opacity 0.85s ease, visibility 0.85s ease, transform 0.85s ease;
+}
+
+#splash-screen.fade-out {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: scale(1.1) !important;
+  pointer-events: none !important;
+}
+
+.splash-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #fff;
+}
