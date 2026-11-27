@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "GROQ_API_KEY belum diatur di Environment Variables Vercel." });
+      return res.status(500).json({ error: "GROQ_API_KEY belum diatur di Vercel." });
     }
 
     const formattedMessages = messages.map((msg) => ({
@@ -43,7 +43,9 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || 'Gagal memanggil Groq API' });
+      return res.status(response.status).json({ 
+        error: `Groq Error: ${data.error?.message || JSON.stringify(data)}` 
+      });
     }
 
     const reply = data.choices?.[0]?.message?.content || 'Maaf, tidak ada respons.';
