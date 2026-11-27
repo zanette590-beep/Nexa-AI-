@@ -1,5 +1,3 @@
-import { handleChat } from "../lib/chat-handler.js";
-
 export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -11,36 +9,57 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
     const messages = body.messages || [];
+    const model = body.model || 'llama-3.3-70b-versatile'; // Default model Groq
 
-    // Format pesan untuk memastikan lampiran (base64) terbaca oleh handler/AI
-    const formattedMessages = messages.map((msg) => {
-      const parts = [{ text: msg.content }];
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "GROQ_API_KEY belum diatur di Environment Variables Vercel." });
+    }
 
-      // Jika pesan dari user memiliki lampiran gambar/file dalam bentuk base64
-      if (msg.attachment && msg.attachment.base64) {
-        parts.push({
-          inlineData: {
-            mimeType: msg.attachment.mimeType,
-            data: msg.attachment.base64
-          }
-        });
-      }
+    // Format pesan agar kompatibel dengan Groq (OpenAI format)
+    const formattedMessages = messages.map((msg) => ({
+      role: msg.role === 'model' ? 'assistant' : (msg.role || 'user'),
+      content: msg.content || ''
+    }));
 
-      return {
-        role: msg.role,
-        parts: parts,
-        // Mendukung properti content standar jika handler membutuhkannya
-        content: msg.content,
-        attachment: msg.attachment
-      };
+    // Tambahkan system prompt dasar jika belum ada
+    if (!formattedMessages.some(m => m.role === 'system')) {
+      formattedMessages.unshift({
+        role: 'system',
+        content: 'Kamu adalah Nexa AI, asisten virtual cerdas tingkat lanjut.'
+      });
+    }
+
+    // Panggil Groq API langsung dari serverless function
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model.includes('Swift') ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 1024
+      })
     });
 
-    // Proses chat melalui handler utama dengan data yang sudah lengkap
-    const result = await handleChat({ messages: formattedMessages });
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Gagal memanggil Groq API' });
+    }
+
+    const reply = data.choices?.[0]?.message?.content || 'Maaf, tidak ada respons.';
     
-    return res.status(result.status || 200).json(result.body || result);
+    return res.status(200).json({ 
+      reply: reply,
+      candidates: [{ content: { parts: [{ text: reply }] } }] 
+    });
+
   } catch (error) {
     console.error("Error di API chat:", error);
-    return res.status(500).json({ error: "Terjadi kesalahan pada server." });
+    return res.status(500).json({ error: "Terjadi kesalahan pada server: " + error.message });
   }
 }
