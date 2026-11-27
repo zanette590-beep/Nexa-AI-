@@ -38,7 +38,7 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// Lightweight Markdown renderer (Diperbaiki agar poin nomor 1 tidak terpotong & tabel/heading rapi)
+// Lightweight Markdown renderer (Bersih & Akurat untuk Heading, Blok Kode, dan Tabel)
 function renderMarkdown(raw) {
   if (!raw) return "";
   const blocks = [];
@@ -409,7 +409,7 @@ async function askAI(chat) {
     return "Saya diciptakan oleh **Oktorio Dwi Kasih Christian** dan **Alfiano Wahyu Al-Qowy**. Mereka adalah pencipta dan pengembang brilian yang merancang sistem Nexa AI ini untuk membantu pengguna dalam berbagai tugas, memberikan informasi, serta berinteraksi sehari-hari.";
   }
 
-  // Ambil pilihan model aktif dari UI untuk dikirim ke backend
+  // Ambil pilihan model aktif dari UI
   const currentModelEl = document.getElementById("currentModelName");
   const selectedModelName = currentModelEl ? currentModelEl.textContent : "Nexa Pro";
 
@@ -506,6 +506,17 @@ async function sendMessage(text) {
     chat.messages.push({ role: "assistant", content: reply });
     removeTyping();
     renderMessage(chat.messages[chat.messages.length - 1]);
+
+    // Simpan riwayat chat ke Firestore jika user sudah login
+    const savedUser = JSON.parse(localStorage.getItem("nexa_logged_user"));
+    if (savedUser && savedUser.uid) {
+      await db.collection("users").doc(savedUser.uid).collection("chats").doc(chat.id).set({
+        chatId: chat.id,
+        title: chat.title,
+        messages: chat.messages,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
   } catch (error) {
     removeTyping();
     const message = `Nexa AI belum bisa memproses pesan. ${error.message}`;
