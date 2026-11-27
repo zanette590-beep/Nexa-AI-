@@ -38,7 +38,7 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// Lightweight Markdown renderer (Bersih & Akurat untuk Heading, Blok Kode, dan Tabel)
+// Lightweight Markdown renderer (Diperbaiki agar poin nomor 1 tidak terpotong & tabel/heading rapi)
 function renderMarkdown(raw) {
   if (!raw) return "";
   const blocks = [];
@@ -54,10 +54,10 @@ function renderMarkdown(raw) {
   safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   safe = safe.replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
-  // 3. Konversi heading Markdown (###, ##, #) dengan aman
+  // 3. Konversi heading Markdown (pastikan tidak memotong angka/poin list)
   safe = safe.replace(/^###\s+(.*$)/gm, '<h3 style="margin: 14px 0 6px; font-size: 14.5px; font-weight: 600; color: var(--text);">$1</h3>');
   safe = safe.replace(/^##\s+(.*$)/gm, '<h2 style="margin: 16px 0 8px; font-size: 16px; font-weight: 600; color: var(--text);">$1</h2>');
-  safe = safe.replace(/^#\s+(.*$)/gm, '<h1 style="margin: 18px 0 10px; font-size: 18px; font-weight: 700; color: var(--text);">$1</h1>');
+  safe = safe.replace(/^#\s+(?!\d)(.*$)/gm, '<h1 style="margin: 18px 0 10px; font-size: 18px; font-weight: 700; color: var(--text);">$1</h1>');
 
   // 4. Ubah garis pemisah '---' menjadi garis tipis elegan (<hr>)
   safe = safe.replace(/^\s*---\s*$/gm, '<hr style="border: none; border-top: 1px solid var(--line); margin: 12px 0;">');
