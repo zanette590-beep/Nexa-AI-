@@ -9,20 +9,17 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
     const messages = body.messages || [];
-    const model = body.model || 'llama-3.1-8b-instant'; // Default model aman
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: "GROQ_API_KEY belum diatur di Environment Variables Vercel." });
     }
 
-    // Format pesan agar kompatibel dengan Groq (OpenAI format)
     const formattedMessages = messages.map((msg) => ({
       role: msg.role === 'model' ? 'assistant' : (msg.role || 'user'),
       content: msg.content || ''
     }));
 
-    // Tambahkan system prompt dasar jika belum ada
     if (!formattedMessages.some(m => m.role === 'system')) {
       formattedMessages.unshift({
         role: 'system',
@@ -30,7 +27,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Panggil Groq API langsung dari serverless function
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -38,7 +34,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant', // Menggunakan model universal Groq yang stabil
+        model: 'llama-3.1-8b-instant',
         messages: formattedMessages,
         temperature: 0.7,
         max_tokens: 1024
