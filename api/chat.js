@@ -15,20 +15,45 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "GROQ_API_KEY belum diatur di Vercel." });
     }
 
+    // 1. Ambil daftar model yang diizinkan untuk API key ini
+    const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const modelsData = await modelsRes.json();
+
+    if (!modelsRes.ok) {
+      return res.status(modelsRes.status).json({
+        error: `Gagal cek model Groq: ${modelsData.error?.message || JSON.stringify(modelsData)}`
+      });
+    }
+
+    // Filter model yang tersedia (abaikan model suara/audio)
+    const availableModels = (modelsData.data || [])
+      .map(m => m.id)
+      .filter(id => !id.includes('whisper') && !id.includes('guard') && !id.includes('orpheus'));
+
+    if (availableModels.length === 0) {
+      return res.status(403).json({
+        error: "Tidak ada model teks yang aktif di akun Groq ini. Coba buat API Key baru di console.groq.com."
+      });
+    }
+
+    // Ambil model pertama yang tersedia di akunmu secara otomatis
+    const selectedModel = availableModels[0];
+
     const formattedMessages = messages.map((msg) => ({
       role: msg.role === 'model' ? 'assistant' : (msg.role || 'user'),
       content: msg.content || ''
     }));
 
-    // Instruksi wajib agar AI selalu ramah dan menggunakan Bahasa Indonesia
     if (!formattedMessages.some(m => m.role === 'system')) {
       formattedMessages.unshift({
         role: 'system',
-        content: 'Kamu adalah Nexa AI, asisten virtual cerdas tingkat lanjut. Kamu WAJIB menjawab seluruh pertanyaan menggunakan Bahasa Indonesia yang baik, natural, ramah, dan santai.'
+        content: 'Kamu adalah Nexa AI, asisten virtual cerdas. Kamu WAJIB menjawab seluruh pertanyaan menggunakan Bahasa Indonesia yang baik, natural, ramah, dan santai.'
       });
     }
 
-    // Menggunakan model teks utama Groq yang paling stabil dan cepat
+    // 2. Kirim pesan menggunakan model yang pasti aktif tersebut
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -36,7 +61,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: selectedModel,
         messages: formattedMessages,
         temperature: 0.7
       })
@@ -46,7 +71,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: `Groq Error: ${data.error?.message || JSON.stringify(data)}`
+        error: `Groq Error (${selectedModel}): ${data.error?.message || JSON.stringify(data)}`
       });
     }
 
