@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Kirim pesan menggunakan model yang pasti aktif tersebut
+    // 2. Kirim pesan menggunakan model yang pasti aktif dengan batasan token yang aman
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -63,7 +63,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: selectedModel,
         messages: formattedMessages,
-        temperature: 0.7
+        temperature: 0.7,
+        max_tokens: 800 // <-- Batasan aman agar tidak melewati limit OTPM akun gratis
       })
     });
 
