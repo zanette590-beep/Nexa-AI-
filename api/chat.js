@@ -15,49 +15,20 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "GROQ_API_KEY belum diatur di Vercel." });
     }
 
-    // 1. Cek otomatis model apa saja yang diizinkan oleh API Key ini
-    const modelsRes = await fetch('https://api.groq.com/openai/v1/models', {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-    const modelsData = await modelsRes.json();
-
-    if (!modelsRes.ok) {
-      return res.status(modelsRes.status).json({
-        error: `Gagal cek daftar model Groq: ${modelsData.error?.message || JSON.stringify(modelsData)}`
-      });
-    }
-
-    // Ambil daftar ID model aktif (hindari model audio/whisper/tts)
-    const availableModels = (modelsData.data || [])
-      .map(m => m.id)
-      .filter(id => !id.includes('whisper') && !id.includes('orpheus') && !id.includes('guard'));
-
-    if (availableModels.length === 0) {
-      return res.status(403).json({
-        error: `Tidak ada model chat yang aktif di akun Groq ini. Daftar mentah: ${JSON.stringify(modelsData.data)}`
-      });
-    }
-
-    // Pilih model terbaik yang tersedia di akunmu
-    const selectedModel =
-      availableModels.find(id => id.includes('llama-3.3-70b')) ||
-      availableModels.find(id => id.includes('llama-3.1-8b')) ||
-      availableModels.find(id => id.includes('llama')) ||
-      availableModels[0];
-
     const formattedMessages = messages.map((msg) => ({
       role: msg.role === 'model' ? 'assistant' : (msg.role || 'user'),
       content: msg.content || ''
     }));
 
+    // Instruksi wajib agar AI selalu ramah dan menggunakan Bahasa Indonesia
     if (!formattedMessages.some(m => m.role === 'system')) {
       formattedMessages.unshift({
         role: 'system',
-        content: 'Kamu adalah Nexa AI, asisten virtual cerdas tingkat lanjut.'
+        content: 'Kamu adalah Nexa AI, asisten virtual cerdas tingkat lanjut. Kamu WAJIB menjawab seluruh pertanyaan menggunakan Bahasa Indonesia yang baik, natural, ramah, dan santai.'
       });
     }
 
-    // 2. Kirim chat menggunakan model yang sudah dipastikan aktif
+    // Menggunakan model teks utama Groq yang paling stabil dan cepat
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -65,7 +36,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: 'llama-3.3-70b-versatile',
         messages: formattedMessages,
         temperature: 0.7
       })
@@ -75,7 +46,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: `Groq Error (${selectedModel}): ${data.error?.message || JSON.stringify(data)}`
+        error: `Groq Error: ${data.error?.message || JSON.stringify(data)}`
       });
     }
 
